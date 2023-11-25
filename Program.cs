@@ -1,6 +1,7 @@
 using BlazingBlogV2.Components;
 using BlazingBlogV2.Components.Account;
 using BlazingBlogV2.Data;
+using BlazingBlogV2.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -28,14 +29,17 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = false)
+    .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+builder.Services.AddTransient<ISeedService, SeedService>();
 
 var app = builder.Build();
+await SeedAsync(app.Services);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -60,4 +64,11 @@ app.MapRazorComponents<App>()
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
 
-app.Run();
+await app.RunAsync();
+
+static async Task SeedAsync(IServiceProvider serviceProvider)
+{
+    var scope = serviceProvider.CreateScope();
+    var seedService = scope.ServiceProvider.GetRequiredService<ISeedService>();
+    await seedService.SeedDataAsync();
+}
