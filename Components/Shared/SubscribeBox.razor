@@ -1,24 +1,63 @@
-﻿<div class="border p-5 bg-lightblue">
+﻿@using BlazingBlogV2.Data.Entities
+@inject ISubscribeService SubscribeService
+
+@attribute [StreamRendering]
+
+<div class="border p-5 bg-lightblue">
     <div class="row justify-content-between">
         <div class="col-md-6">
             <h5 class="font-weight-bold secondfont">Become a member</h5>
             Get the latest news right in your inbox. It's free and you can unsubscribe at any time. We hate spam as much as we do, so we never spam!
         </div>
         <div class="col-md-6">
-            <div class="row">
-                <div class="col-md-6">
-                    <input type="text" class="form-control" placeholder="First name">
+            <EditForm Model="ModelSubscriber" OnInvalidSubmit="SubscribeAsync" FormName="subscribe_form">
+                <DataAnnotationsValidator />
+                <div class="row">
+                    <div class="col-md-6">
+                        <InputText type="text" @bind-Value="ModelSubscriber.Name" class="form-control" placeholder="Name" />
+                        <ValidationMessage For="()=>ModelSubscriber.Name" class="text-danger" />
+                    </div>
+                    <div class="col-md-6">
+                        <InputText type="email" @bind-Value="ModelSubscriber.Email" class="form-control" placeholder="Email" />
+                        <ValidationMessage For="()=>ModelSubscriber.Email" class="text-danger" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(_message))
+                    {
+                        <div class="col-md-12">
+                            <p class="m-0 p-0">
+                                @_message
+                            </p>
+                        </div>
+                    }
+                    <div class="col-md-12 mt-3">
+                        <button type="submit" class="btn btn-success btn-block">Subscribe</button>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <input type="text" class="form-control" placeholder="Last name">
-                </div>
-                <div class="col-md-12 mt-3">
-                    <button type="submit" class="btn btn-success btn-block">Subscribe</button>
-                </div>
-            </div>
+            </EditForm>
         </div>
     </div>
 </div>
 @code {
-    
+
+    [SupplyParameterFromForm]
+    Subscriber ModelSubscriber { get; set; } = new();
+
+    string? _message;
+
+
+    async Task SubscribeAsync()
+    {
+        _message = "subscribing...";
+        var errorMessage = await SubscribeService.SubscribeAsync(ModelSubscriber);
+        if (errorMessage is not null)
+        {
+            _message = errorMessage;
+        }
+        else
+        {
+            _message = "Thank you for subscribing !";
+            ModelSubscriber = new();
+        }
+    }
 }

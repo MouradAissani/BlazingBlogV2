@@ -5,9 +5,9 @@ namespace BlazingBlogV2.Data.Entities;
 public class Subscriber
 {
     public long Id { get; set; }
-    [Required,EmailAddress, MaxLength(150)]
+    [Required]
     public string Email { get; set; }
-    [Required,MaxLength(25)]
+    [Required]
     public string Name { get; set; }
     public DateTime SubscribedOn { get; set; }
 }

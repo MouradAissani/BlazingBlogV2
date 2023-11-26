@@ -135,7 +135,7 @@
     Category[] _categories = [];
     BlazoredTextEditor quillHtml;
     string? _imageUrl;
-    
+
     IBrowserFile? _fileToUpload;
     string _errorMessage;
     [Parameter]
@@ -144,7 +144,8 @@
     {
         _categories = await CategoryService.GetCategoriesAsync();
         if (Id.HasValue && Id > 0)
-        {  _isLoading = true;
+        {
+            _isLoading = true;
             _loadingText = "Fetching blog post ...";
             var blogPost = await BlogPostAdminService.GetBlogPostByIdAsync(Id.Value);
             if (blogPost is null)
@@ -177,7 +178,7 @@
         await using var fs = new FileStream(fullPath, FileMode.Create);
         try
         {
-           
+
             await browserFile.OpenReadStream().CopyToAsync(fs);
             return fileNamePath.Replace("\\", "/");
 
@@ -187,12 +188,12 @@
             _errorMessage = e.Message;
             fs.Close();
             return null;
-    //throw;
+            //throw;
         }
     }
     async Task SaveBlogPostAsync()
     {
-        string? _imageUrlToDelete=null;
+        string? _imageUrlToDelete = null;
         var content = await quillHtml!.GetHTML();
         if (string.IsNullOrEmpty(content))
         {
@@ -203,10 +204,10 @@
         _loadingText = "Saving blog post ...";
         if (_fileToUpload is not null)
         {
-           var uploadedFileUrl =  await SaveFileToDiscAsync(_fileToUpload);
+            var uploadedFileUrl = await SaveFileToDiscAsync(_fileToUpload);
             if (uploadedFileUrl is null)
                 return;
-            if (_model.Id>0&&!string.IsNullOrEmpty(_model.Image)) 
+            if (_model.Id > 0 && !string.IsNullOrEmpty(_model.Image))
             {
                 if (_imageUrlToDelete is null)
                 {
@@ -214,9 +215,9 @@
                 }
             }
             _model.Image = uploadedFileUrl;
-            
+
         }
-      
+
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var userId = authState.User.GetUserId();
         await BlogPostAdminService.SaveBlogPostAsync(_model, userId);
@@ -226,7 +227,7 @@
             DeleteExistingImage(_imageUrlToDelete);
         }
         //_isLoading = false;
-        NavigationManager.NavigateTo("admin/manage-blog-posts",true);
+        NavigationManager.NavigateTo("admin/manage-blog-posts", true);
     }
     async Task PreviewImageAsync(IBrowserFile file)
     {
@@ -245,7 +246,7 @@
         {
             File.Delete(fullPath);
         }
-        catch{}
+        catch { }
     }
 
 }

@@ -1,0 +1,90 @@
+﻿@page "/{categorySlug}/all"
+@page "/{categorySlug}/all/page-{uriPageNumber:int}"
+@using BlazingBlogV2.Data.Entities
+@inject IBlogPostService BlogPostService
+@inject NavigationManager NavigationManager
+@inject ICategoryService CategoryService
+
+@if (_category is not null){ 
+<div class="container mt-5 mb-5">
+    <div class="row">
+        <div class="col-md-8">
+
+            <h5 class="font-weight-bold spanborder">
+                <span>@_category.Name Posts @(_pageNumber>1 ? $"(Page - {_pageNumber})":"")</span></h5>
+
+            <BlogPostsList Posts="_posts" />
+            <hr/>
+            <div class="d-flex justify-content-between">
+                @if (_pageNumber >1)
+                {
+                    var prevPageUrl = $"{CategorySlug}/all";
+                    if (_pageNumber > 2)
+                    {
+                        prevPageUrl += $"/page-{_pageNumber - 1}";
+                    }
+                        <a href="@prevPageUrl" class="btn btn-sm btn-outline-primary" >Previous Page</a>
+                }
+                else
+                {
+                    <span>&nbsp;</span>
+                }
+                @if (_posts.Length == _pageSize)
+                {
+                    <a class="btn btn-sm btn-outline-primary" href="@CategorySlug/all/page-@(_pageNumber + 1)" >Next Page</a>
+                }
+            </div>
+            <hr/>
+
+        </div>
+        <div class="col-md-4 pl-4">
+            <div class="sticky-top">
+                <h5 class="font-weight-bold spanborder"><span>Popular in @_category.Name</span></h5>
+                <PopularBlogPostsList Posts="_popular" />
+            </div>
+        </div>
+
+    </div>
+</div>
+}
+
+@code {
+    [Parameter]
+    public string CategorySlug { get; set; }
+    [Parameter]
+    public int? UriPageNumber { get; set; }
+
+    Category _category;
+    BlogPost[] _posts = [];
+    BlogPost[] _popular = [];
+    const int _pageSize = 2;
+    int _pageNumber = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (UriPageNumber.HasValue && UriPageNumber.Value>0)
+        {
+            if (UriPageNumber.Value < 2)
+            {
+                NavigationManager.NavigateTo($"{CategorySlug}/all",true);
+                return;
+            }
+            _pageNumber = UriPageNumber.Value;
+        }
+        var category = await CategoryService.GetCategoryBySlug(CategorySlug);
+        if (category is null)
+        {
+            NavigationManager.NavigateTo("/", true);
+            return;
+        }
+        _category = category;
+
+        var posts = await Task.WhenAll(
+            BlogPostService.GetPopularBlogPostsAsync(5, _category.Id),
+            BlogPostService.GetBlogPostsAsync(_pageNumber-1, _pageSize, _category.Id)
+            );
+        _popular = posts[0];
+        _posts = posts[1];
+    }
+
+}

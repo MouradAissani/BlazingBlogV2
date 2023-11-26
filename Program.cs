@@ -36,9 +36,12 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
     .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
-builder.Services.AddTransient<ISeedService, SeedService>()
-                .AddTransient<ICategoryService, CategoryService>()
-                .AddTransient<IBlogPostAdminService, BlogPostAdminService>();
+builder.Services
+    .AddTransient<ISeedService, SeedService>()
+    .AddTransient<ICategoryService, CategoryService>()
+    .AddTransient<IBlogPostAdminService, BlogPostAdminService>()
+    .AddTransient<IBlogPostService, BlogPostService>()
+    .AddTransient<ISubscribeService, SubscribeService>();
 
 var app = builder.Build();
 await SeedAsync(app.Services);
