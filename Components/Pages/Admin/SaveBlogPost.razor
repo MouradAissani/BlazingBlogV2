@@ -19,7 +19,7 @@
     <script src="_content/Blazored.TextEditor/quill-blot-formatter.min.js"></script>
     <script src="_content/Blazored.TextEditor/Blazored-BlazorQuill.js"></script>
 </SectionContent>
-<AdminHeader Title="Create new Blog Post">
+<AdminHeader Title="@(Id.HasValue && Id>0?"Update Blog Post":"Create new Blog Post")">
     <ActionButtons>
         <NavLink href="/admin/manage-blog-posts" class="btn btn-sm btn-primary">Back</NavLink>
     </ActionButtons>
