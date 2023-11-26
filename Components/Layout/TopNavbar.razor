@@ -1,0 +1,66 @@
+﻿@using BlazingBlogV2.Data.Entities
+<!--------------------------------------
+NAVBAR
+--------------------------------------->
+@inject NavigationManager NavigationManager
+@inject ICategoryService CategoryService
+
+<nav class="topnav navbar navbar-expand-lg navbar-light bg-white fixed-top">
+    <div class="container">
+        <a class="navbar-brand" href="./index.html"><strong>Blazing Blog V2</strong></a>
+        <button class="navbar-toggler collapsed" type="button" data-toggle="collapse" data-target="#navbarColor02" aria-controls="navbarColor02" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="navbar-collapse collapse" id="navbarColor02" style="">
+            <ul class="navbar-nav mr-auto d-flex align-items-center">
+                <li class="nav-item">
+                    <a class="nav-link" href="./index.html">Intro <span class="sr-only">(current)</span></a>
+                </li>
+                @foreach (var c in _categories)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link" href="./article.html">@c.Name</a>
+                    </li>
+                }
+               
+       
+            </ul>
+            <ul class="navbar-nav ml-auto d-flex align-items-center">
+                
+                <AuthorizeView>
+                    <Authorized>
+                        <li class="nav-item ">
+                            <a class="nav-link" href="admin/dashboard">@context.User.GetUserName() | @context.User.GetUserId()</a>
+                        </li>
+                        <li class="nav-item highlight">
+                            <LogoutForm ButtonClasses="nav-link"/>
+                        </li>
+                    </Authorized>
+                    <NotAuthorized>
+                        <li class="nav-item">
+                            <a class="nav-link" href="Account/Login">Login</a>
+                        </li>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </ul>
+        </div>
+    </div>
+</nav>
+<!-- End Navbar -->
+
+@code {
+
+    Category [] _categories = [];
+        const int MaxCategoriesToShowOnNavbar = 5;
+    protected override async  Task OnInitializedAsync()
+    {
+        var categories = await CategoryService.GetCategoriesAsync();
+        _categories = categories.Where(c => c.ShowOnNavbar).Take(MaxCategoriesToShowOnNavbar).ToArray();
+        if (_categories.Length<MaxCategoriesToShowOnNavbar)
+        {
+            _categories= [.. _categories, .. categories.Where(c=>!c.ShowOnNavbar).Take(MaxCategoriesToShowOnNavbar-_categories.Length)]
+            ;
+        }
+    }
+
+}

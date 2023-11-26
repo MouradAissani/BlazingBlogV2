@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Runtime.CompilerServices;
 
 namespace BlazingBlogV2.Data.Entities;
 
@@ -11,6 +10,7 @@ public class Category
     [MaxLength(75)]
     public string Slug { get; set; }
     public bool ShowOnNavbar { get; set; }
+    public Category Clone() => (MemberwiseClone() as Category)!;
 
     public static List<Category> GetSeedCategories()
     => new()

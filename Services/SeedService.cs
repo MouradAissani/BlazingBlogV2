@@ -32,8 +32,7 @@ public class SeedService : ISeedService
 
     public async Task SeedDataAsync()
     {
-
-
+        await MigrateDatabaseAsync();
         // seed admin role
         if (await _roleManager.FindByNameAsync(AdminAccount.Role) is null)
         {
@@ -58,7 +57,7 @@ public class SeedService : ISeedService
             await _userStore.SetUserNameAsync(adminUser,
                 adminUser.Email,
                 cancellationToken: CancellationToken.None);
-            var result = await _userManager.CreateAsync(adminUser,AdminAccount.Password);
+            var result = await _userManager.CreateAsync(adminUser, AdminAccount.Password);
             if (!result.Succeeded)
             {
                 var errorsString = string.Join(Environment.NewLine,
@@ -70,10 +69,20 @@ public class SeedService : ISeedService
 
         }
         // seed categories
-        if (await _dbContext.Categories.AsNoTracking().AnyAsync())
+        if (!await _dbContext.Categories.AsNoTracking().AnyAsync())
         {
             await _dbContext.Categories.AddRangeAsync(Category.GetSeedCategories());
             await _dbContext.SaveChangesAsync();
         }
+    }
+
+    async Task MigrateDatabaseAsync()
+    {
+#if DEBUG
+        if ((await _dbContext.Database.GetAppliedMigrationsAsync()).Any())
+        {
+            await _dbContext.Database.MigrateAsync();
+        }
+#endif
     }
 }

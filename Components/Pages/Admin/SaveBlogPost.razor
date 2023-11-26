@@ -1,0 +1,251 @@
+﻿@page "/admin/manage-blog-posts/new"
+@page "/admin/manage-blog-posts/edit/{id:int?}"
+
+
+@using BlazingBlogV2.Data.Entities
+@using Blazored.TextEditor
+@rendermode InteractiveServer
+@inject IBlogPostAdminService BlogPostAdminService
+@inject ICategoryService CategoryService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IWebHostEnvironment WebHostEnvironment
+@inject NavigationManager NavigationManager
+<HeadContent>
+    <link href="//cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <link href="//cdn.quilljs.com/1.3.6/quill.bubble.css" rel="stylesheet">
+</HeadContent>
+<SectionContent SectionName="scripts">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    <script src="_content/Blazored.TextEditor/quill-blot-formatter.min.js"></script>
+    <script src="_content/Blazored.TextEditor/Blazored-BlazorQuill.js"></script>
+</SectionContent>
+<AdminHeader Title="Create new Blog Post">
+    <ActionButtons>
+        <NavLink href="/admin/manage-blog-posts" class="btn btn-sm btn-primary">Back</NavLink>
+    </ActionButtons>
+</AdminHeader>
+@if (_isLoading)
+{
+    <Loader LoaderText="@_loadingText" />
+}
+<EditForm Model="_model" OnValidSubmit="SaveBlogPostAsync">
+    <DataAnnotationsValidator />
+    <div class="row">
+        <div class="col-sm-6">
+            <div class="mb-3">
+                <label class="form-label">Title</label>
+                <InputText @bind-Value="_model.Title" class="form-control form-control-sm" placeholder="Blog post title" />
+                <ValidationMessage For="()=>_model.Title" class="text-danger" />
+            </div>
+            <div class="mb-3">
+                <label class="v">Category</label>
+                <InputSelect @bind-Value="_model.CategoryId" class="form-control form-control-sm">
+                    <option value="0">Select Category</option>
+                    @foreach (var c in _categories)
+                    {
+                        <option value="@c.Id">@c.Name</option>
+                    }
+                </InputSelect>
+                <ValidationMessage For="()=>_model.CategoryId" class="text-danger" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Introduction</label>
+                <InputText @bind-Value="_model.Introduction" class="form-control form-control-sm" placeholder="Blog post introduction" />
+                <ValidationMessage For="()=>_model.Introduction" class="text-danger" />
+            </div>
+            @if (!string.IsNullOrEmpty(_imageUrl))
+            {
+                <div class="mb-3">
+                    <img src="@_imageUrl" style="height: 200px;" />
+                </div>
+            }
+            <div class="mb-3">
+                <label class="form-label d-block">Upload Image</label>
+                <InputFile OnChange="HandleFileUpload" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label ml-3">
+                    <InputCheckbox @bind-Value="_model.IsFeatured" class="form-check-input" />
+                    Featured ?
+                </label>
+            </div>
+            <div class="mb-3">
+                <label class="form-label ml-3">
+                    <InputCheckbox @bind-Value="_model.IsPublished" class="form-check-input" />
+                    Published ?
+                </label>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="mb-3">
+                    <p class="text-danger">@_errorMessage</p>
+                </div>
+            }
+            <div class="mb-3">
+                <button class="btn btn-sm btn-success ">Save</button>
+            </div>
+        </div>
+        <div class="col-sm-6 d-flex">
+            <div class="mb-3 flex-grow-1">
+                <label class="form-label">Content: </label>
+
+                <BlazoredTextEditor @ref="@quillHtml" Placeholder="Enter content...">
+                    <ToolbarContent>
+                        <select class="ql-header">
+                            <option selected=""></option>
+                            <option value="1"></option>
+                            <option value="2"></option>
+                            <option value="3"></option>
+                            <option value="4"></option>
+                            <option value="5"></option>
+                        </select>
+                        <span class="ql-formats">
+                            <button class="ql-bold"></button>
+                            <button class="ql-italic"></button>
+                            <button class="ql-underline"></button>
+                            <button class="ql-strike"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <select class="ql-color"></select>
+                            <select class="ql-background"></select>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-list" value="ordered"></button>
+                            <button class="ql-list" value="bullet"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-link"></button>
+                        </span>
+                    </ToolbarContent>
+                    <EditorContent>
+                        @((MarkupString)_model.Content)
+                    </EditorContent>
+                </BlazoredTextEditor>
+
+                <ValidationMessage For="()=> _model.Content" />
+            </div>
+        </div>
+    </div>
+</EditForm>
+@code {
+    bool _isLoading;
+    string? _loadingText;
+    BlogPost _model = new();
+    Category[] _categories = [];
+    BlazoredTextEditor quillHtml;
+    string? _imageUrl;
+    
+    IBrowserFile? _fileToUpload;
+    string _errorMessage;
+    [Parameter]
+    public int? Id { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        _categories = await CategoryService.GetCategoriesAsync();
+        if (Id.HasValue && Id > 0)
+        {  _isLoading = true;
+            _loadingText = "Fetching blog post ...";
+            var blogPost = await BlogPostAdminService.GetBlogPostByIdAsync(Id.Value);
+            if (blogPost is null)
+            {
+                NavigationManager.NavigateTo("admin/manage-blog-posts", true);
+            }
+            _isLoading = false;
+            _model = blogPost;
+            _imageUrl = blogPost.Image;
+        }
+    }
+
+    async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        await PreviewImageAsync(e.File);
+        _fileToUpload = e.File;
+    }
+
+    async Task<string?> SaveFileToDiscAsync(IBrowserFile browserFile)
+    {
+        var randomFileName = Path.GetRandomFileName();
+        var extension = Path.GetExtension(browserFile.Name);
+        var folder = Path.Combine(WebHostEnvironment.WebRootPath, "images", "posts");
+        if (!Directory.Exists(folder))
+        {
+            Directory.CreateDirectory(folder);
+        }
+        var fileNamePath = Path.Combine("images", "posts", randomFileName + extension);
+        var fullPath = Path.Combine(WebHostEnvironment.WebRootPath, fileNamePath);
+        await using var fs = new FileStream(fullPath, FileMode.Create);
+        try
+        {
+           
+            await browserFile.OpenReadStream().CopyToAsync(fs);
+            return fileNamePath.Replace("\\", "/");
+
+        }
+        catch (Exception e)
+        {
+            _errorMessage = e.Message;
+            fs.Close();
+            return null;
+    //throw;
+        }
+    }
+    async Task SaveBlogPostAsync()
+    {
+        string? _imageUrlToDelete=null;
+        var content = await quillHtml!.GetHTML();
+        if (string.IsNullOrEmpty(content))
+        {
+            _errorMessage = "Content is required";
+        }
+        _model.Content = content;
+        _isLoading = true;
+        _loadingText = "Saving blog post ...";
+        if (_fileToUpload is not null)
+        {
+           var uploadedFileUrl =  await SaveFileToDiscAsync(_fileToUpload);
+            if (uploadedFileUrl is null)
+                return;
+            if (_model.Id>0&&!string.IsNullOrEmpty(_model.Image)) 
+            {
+                if (_imageUrlToDelete is null)
+                {
+                    _imageUrlToDelete = _model.Image;
+                }
+            }
+            _model.Image = uploadedFileUrl;
+            
+        }
+      
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.GetUserId();
+        await BlogPostAdminService.SaveBlogPostAsync(_model, userId);
+        _fileToUpload = null;
+        if (_imageUrlToDelete is not null)
+        {
+            DeleteExistingImage(_imageUrlToDelete);
+        }
+        //_isLoading = false;
+        NavigationManager.NavigateTo("admin/manage-blog-posts",true);
+    }
+    async Task PreviewImageAsync(IBrowserFile file)
+    {
+        var extension = Path.GetExtension(file.Name)[1..];
+        using var imageStream = file.OpenReadStream();
+        using MemoryStream ms = new MemoryStream();
+        await imageStream.CopyToAsync(ms);
+        _imageUrl = $"data:image/{extension};base64,{Convert.ToBase64String(ms.ToArray())}";
+    }
+
+    void DeleteExistingImage(string imageUrlToDelete)
+    {
+        var imagePath = imageUrlToDelete.Replace("/", "\\");
+        var fullPath = Path.Combine(WebHostEnvironment.WebRootPath, imagePath);
+        try
+        {
+            File.Delete(fullPath);
+        }
+        catch{}
+    }
+
+}
